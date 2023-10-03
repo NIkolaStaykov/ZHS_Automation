@@ -10,7 +10,7 @@ from datetime import datetime as time
 import json
 import re
 
-timeout = 40  # seconds of timeout for the webdriver to wait for an element to be present
+timeout = 3  # seconds of timeout for the webdriver to wait for an element to be present
 
 
 class ReservationAutomation:
@@ -41,19 +41,68 @@ class ReservationAutomation:
         # create the initial window
         self.driver = webdriver.Chrome(options=chrome_options)
 
-    def load_course_registration_page(self, course_name):
+    def load_course_registration_page(self, course_name, course_data):
+        print(f"Loading course registration page for {course_name}")
         # Load list with courses
         self.driver.get("https://www.buchung.zhs-muenchen.de/angebote/aktueller_zeitraum_0/index.html")
 
         # Wait for the page to load
-        WebDriverWait(self.driver, timeout).until(EC.element_to_be_clickable((By.XPATH, f'//a[contains(., "{course_name}")]')))
-        hrefs = self.driver.find_element(By.XPATH, f'//a[contains(.,"{course_name}")]').click()
-        return True
+        try:
+            WebDriverWait(self.driver, timeout).until(EC.element_to_be_clickable((By.XPATH, f'//a[contains(., "{course_name}")]')))
+        except:
+            print("Course not found")
+            return
+        self.driver.find_element(By.XPATH, f'//a[contains(.,"{course_name}")]').click()
+
+        try:
+            WebDriverWait(self.driver, timeout).until(EC.visibility_of_any_elements_located((By.XPATH, '//input')))
+        except:
+            print("Booking not awailable yet")
+            return
+
+        booking_buttons = self.driver.find_elements(By.XPATH, '//input[@value="buchen"]')
+        if len(booking_buttons) == 1 or course_data == {}:
+            booking_buttons[0].click()
+            self.driver.switch_to.window(self.driver.window_handles[1])
+        else:
+            print("Multiple bookings available")
+
+    def login(self):
+        login_data = self.user_data["login"]
+        WebDriverWait(self.driver, timeout).until(EC.presence_of_element_located((By.XPATH, '//input')))
+        self.driver.find_element(By.XPATH, '//div[@id="bs_pw_anmlink"]').click()
+
+        self.driver.find_element(By.XPATH, '//input[contains(@name, "mail")]').send_keys(login_data["mail"])
+        self.driver.find_element(By.XPATH, '//input[@type="password"]').send_keys(login_data["password"])
+        self.driver.find_element(By.XPATH, '//input[@value="weiter zur Buchung"]').click()
+
+    def fill_bank_data(self):
+        # Wait for the page to load
+        WebDriverWait(self.driver, timeout).until(EC.visibility_of_any_elements_located((By.XPATH, '//select')))
+
+        # semester_box = self.driver.find_element(By.XPATH, '//div[contains(., "semester")]/following-sibling::div')
+        # semester_box.find_element(By.XPATH, '//input').click()
+        # semester_box.find_element(By.XPATH, '//input').send_keys("5")
+
+        nationality_box = self.driver.find_element(By.XPATH, '//div[contains(., "Nationalität")]/following-sibling::div')
+        nationality_box.find_element(By.XPATH, 'select').send_keys(self.user_data["login"]["country"])
+
+        iban_box = self.driver.find_element(By.XPATH, '//div[contains(., "IBAN")]/following-sibling::div')
+        iban_box.find_element(By.XPATH, 'input').send_keys(self.user_data["bank"]["IBAN"]+'\n')
+
+        bic_box = self.driver.find_element(By.XPATH, '//div[contains(., "BIC")]/following-sibling::div')
+        bic_box.find_element(By.XPATH, 'input').send_keys(self.user_data["bank"]["BIC"])
+
+        self.driver.find_element(By.XPATH, '//a[contains(., "Teilnahmebedingungen")]/preceding-sibling::input').click()
 
     def make_reservations(self):
-        for course in self.user_data["courses"]:
-            self.load_course_registration_page(course)
-            self.make_reservation(course)
+        for (course_name, course_data) in self.user_data["courses"].items():
+            self.load_course_registration_page(course_name, course_data)
+            self.login()
+            self.fill_bank_data()
+            self.driver.find_element(By.XPATH, '//input[contains(@value, "Buchung")]').click()
+            self.driver.find_element(By.XPATH, '//input[contains(@value, "buchen")]').click()
+            print(f"Successfully booked {course_name}")
 
 
 def main():
