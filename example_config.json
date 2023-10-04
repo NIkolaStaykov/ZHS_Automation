@@ -1,0 +1,16 @@
+{
+  "login": {
+    "mail": "mail",
+    "password": "password",
+    "country": "Bulgaria"
+  },
+  "courses" : {
+    "Tango Argentino": {
+      "detail": "A"
+    }
+  },
+  "bank": {
+    "IBAN": "IBAN",
+    "BIC": "BIC"
+  }
+}

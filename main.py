@@ -48,21 +48,28 @@ class ReservationAutomation:
             return
         self.driver.find_element(By.XPATH, f'//a[contains(.,"{course_name}")]').click()
 
+        booking = self.select_booking(course_data)
+        if booking is None:
+            print("Booking not found")
+            return
+
         try:
             WebDriverWait(self.driver, timeout).until(EC.visibility_of_any_elements_located((By.XPATH, '//input')))
         except:
             print("Booking not awailable yet")
             return
 
-        booking = self.select_booking(course_data)
-        if booking is None:
-            print("Booking not found")
-            return
-
         booking.find_element(By.XPATH, '//input[@value="buchen"]').click()
         self.driver.switch_to.window(self.driver.window_handles[1])
 
     def select_booking(self, course_data):
+        try:
+            WebDriverWait(self.driver, timeout).until(EC.visibility_of_any_elements_located(
+                (By.XPATH, '//tr[@class="bs_odd" or @class="bs_even"]')))
+        except:
+            print("No course entries found")
+            return
+
         bookings = self.driver.find_elements(By.XPATH, '//tr[@class="bs_odd" or @class="bs_even"]')
         if len(bookings) == 1 or course_data == {}:
             return bookings[0]
