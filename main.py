@@ -4,8 +4,11 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import json
+import argparse
+import time
+import datetime
 
-timeout = 3  # seconds of timeout for the webdriver to wait for an element to be present
+timeout = 5  # seconds of timeout for the webdriver to wait for an element to be present
 
 
 class ReservationAutomation:
@@ -115,10 +118,11 @@ class ReservationAutomation:
             self.driver.find_element(By.XPATH, '//input[contains(@value, "buchen")]').click()
             print(f"Successfully booked {course_name}")
 
+        while True:
+            time.sleep(60)
 
-def main():
-    config_path = "config.json"
 
+def main(config_path="config.json"):
     driver_options = {"useAutomationExtension": False,
                       "excludeSwitches": ["enable-automation"],
                       "prefs": {"credentials_enable_service": False,
@@ -129,5 +133,18 @@ def main():
     bot.make_reservations()
 
 
+argparser = argparse.ArgumentParser(description='Automate course reservations')
+argparser.add_argument('-c', '--config', help='Path to config file', default='config.json')
+
 if __name__ == "__main__":
-    main()
+    config_path = argparser.parse_args().config
+    if ".json" not in config_path:
+        config_path += ".json"
+
+    now = datetime.datetime.now()
+    execution_time = datetime.datetime(now.year, now.month, now.day, 16, 10, 2)
+    delta = execution_time - now
+    print(f"Waiting {delta.seconds} seconds")
+    time.sleep(delta.seconds)
+    print(f"Starting bot at {datetime.datetime.now()}")
+    main(config_path)
